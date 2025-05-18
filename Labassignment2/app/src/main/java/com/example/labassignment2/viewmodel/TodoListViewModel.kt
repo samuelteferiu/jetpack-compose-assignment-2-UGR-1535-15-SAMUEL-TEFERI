@@ -1,18 +1,20 @@
-package com.example.labassignment2
+package com.example.labassignment2.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.labassignment2.data.TodoEntity
+import com.example.labassignment2.model.Todo
 import com.example.labassignment2.repository.TodoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.net.UnknownHostException
+import javax.inject.Inject
 
 sealed class TodoUiState {
     object Loading : TodoUiState()
-    data class Success(val todos: List<TodoEntity>) : TodoUiState()
+    data class Success(val todos: List<Todo>) : TodoUiState()
     data class Error(val message: String) : TodoUiState()
 }
 
@@ -30,13 +32,27 @@ class TodoListViewModel @Inject constructor(
 
     private fun fetchTodos() {
         viewModelScope.launch {
-            _uiState.value = TodoUiState.Loading
+            // Collect cached todos from Room immediately
+            repository.todos.collectLatest { todos ->
+                if (todos.isNotEmpty()) {
+                    _uiState.value = TodoUiState.Success(todos)
+                } else {
+                    _uiState.value = TodoUiState.Loading
+                }
+            }
+        }
+        // Trigger network refresh in the background
+        viewModelScope.launch {
             try {
-                val todos = repository.getTodos()
-                println("Todos from repository: $todos") // Debug log
-                _uiState.value = TodoUiState.Success(todos)
+                repository.refreshTodos()
+            } catch (e: UnknownHostException) {
+                if (_uiState.value !is TodoUiState.Success) {
+                    _uiState.value = TodoUiState.Error("No network connection, and no cached data available")
+                }
             } catch (e: Exception) {
-                _uiState.value = TodoUiState.Error("Failed to load todos")
+                if (_uiState.value !is TodoUiState.Success) {
+                    _uiState.value = TodoUiState.Error("Failed to load todos: ${e.message}")
+                }
             }
         }
     }

@@ -11,8 +11,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.labassignment2.TodoListViewModel
-import com.example.labassignment2.TodoUiState
+import com.example.labassignment2.model.Todo
+import com.example.labassignment2.viewmodel.TodoListViewModel
+import com.example.labassignment2.viewmodel.TodoUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
